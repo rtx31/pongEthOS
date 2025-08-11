@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <title>Pong dengan Logo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <style>
+    html, body { margin:0; height:100%; display:flex; justify-content:center; align-items:center; background:#111; }
+    canvas { background:#222; touch-action:none; display:block; }
+    .hud { position:absolute; top:10px; width:100%; text-align:center; color:#fff; font:16px sans-serif; pointer-events:none; }
+  </style>
+</head>
+<body>
+  <div class="hud" id="hud">0 : 0</div>
+  <canvas id="gameCanvas"></canvas>
+
+<script>
+(() => {
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const hud = document.getElementById('hud');
+  let W, H;
+  const paddleW = 10, paddleH = 80;
+  let player = { x: 10, y: 0 }, ai = { x: 0, y: 0, speed: 4 };
+  let ball = { x:0, y:0, r:20, vx:0, vy:0, speed:5 };
+  let playerScore = 0, aiScore = 0, running = false;
+
+  // Muat logo
+  const logo = new Image();
+  logo.src = 'logo.png'; // ganti dengan path logo-mu
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    ai.x = W - paddleW - 10;
+    resetBall();
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function resetBall() {
+    ball.x = W/2; ball.y = H/2; ball.speed = 5;
+    const angle = (Math.random() * 120 - 60) * Math.PI / 180;
+    const dir = Math.random()<0.5 ? 1 : -1;
+    ball.vx = dir * ball.speed * Math.cos(angle);
+    ball.vy = ball.speed * Math.sin(angle);
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    // garis tengah
+    ctx.strokeStyle = '#555'; ctx.lineWidth = 2; ctx.setLineDash([10,10]);
+    ctx.beginPath(); ctx.moveTo(W/2,0); ctx.lineTo(W/2,H); ctx.stroke(); ctx.setLineDash([]);
+    // paddles
+    ctx.fillStyle = '#0f0'; ctx.fillRect(player.x, player.y, paddleW, paddleH);
+    ctx.fillStyle = '#f00'; ctx.fillRect(ai.x, ai.y, paddleW, paddleH);
+    // gambar logo sebagai bola
+    ctx.drawImage(logo, ball.x - ball.r, ball.y - ball.r, ball.r*2, ball.r*2);
+    hud.textContent = `${playerScore} : ${aiScore}`;
+  }
+
+  function update() {
+    ball.x += ball.vx; ball.y += ball.vy;
+    if (ball.y < ball.r || ball.y > H - ball.r) ball.vy *= -1;
+    if (ball.x - ball.r < player.x + paddleW && ball.y > player.y && ball.y < player.y + paddleH) {
+      ball.vx = Math.abs(ball.vx);
+    }
+    if (ball.x + ball.r > ai.x && ball.y > ai.y && ball.y < ai.y + paddleH) {
+      ball.vx = -Math.abs(ball.vx);
+    }
+    if (ball.x < 0) { aiScore++; resetBall(); running = false; }
+    else if (ball.x > W) { playerScore++; resetBall(); running = false; }
+    ai.y += (ball.y - ai.y - paddleH/2) * 0.05;
+    draw();
+  }
+
+  function loop() {
+    if (!running) return;
+    update();
+    requestAnimationFrame(loop);
+  }
+
+  canvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    const t = e.touches[0];
+    player.y = Math.max(0, Math.min(H - paddleH, t.clientY - paddleH / 2));
+    if (!running) { running = true; loop(); }
+  }, { passive: false });
+
+  canvas.addEventListener('touchstart', e => {
+    e.preventDefault(); if (!running) { running = true; loop(); }
+  }, { passive: false });
+  canvas.addEventListener('click', () => { if (!running) { running = true; loop(); } });
+
+  logo.onload = draw;
+})();
+</script>
+</body>
+</html>
